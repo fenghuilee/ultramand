@@ -6,27 +6,6 @@ import (
 )
 
 const (
-	NotAuthorized = `HTTP/1.0 401 Not Authorized
-WWW-Authenticate: Basic realm="ultraman"
-Content-Length: 23
-
-Authorization required
-`
-
-	NotFound = `HTTP/1.0 404 Not Found
-Content-Length: %d
-
-Tunnel %s not found
-`
-
-	BadRequest = `HTTP/1.0 400 Bad Request
-Content-Length: 12
-
-Bad Request
-`
-)
-
-const (
 	// Time allowed to read/write the tcp connection to the client.
 	TimeKeepAlive = 60 * time.Second
 )
@@ -40,7 +19,7 @@ type Server struct {
 }
 
 type Client struct {
-	Conn     net.Conn
+	Conn     *net.Conn
 	Server   *Server
 	ReadBuf  []byte
 	WriteBuf []byte

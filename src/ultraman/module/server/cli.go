@@ -13,8 +13,9 @@ func CliRunArgs() *CliOptions {
 	//conf := flag.String("conf", "./conf/server.ini", "Path to config file")
 
 	domain := flag.String("domain", "tunnel.preruntime.com", "Domain where the tunnels are hosted")
-	http := flag.String("http", ":8000", "Public address for HTTP connections, empty string to disable")
-	webSocket := flag.String("websocket", ":4443", "Public address listening for ngrok client")
+	http := flag.String("http", ":8000", "Public address for HTTP connections")
+	webSocket := flag.String("websocket", ":4443", "Public address listening for ultraman client")
+	ssdb := flag.String("ssdb", "127.0.0.1:8888", "Ssdb server address")
 	logTo := flag.String("log-to", "stdout", "Write log messages to this file. 'stdout' and 'none' have special meanings")
 	logLevel := flag.String("log-level", "DEBUG", "The level of messages to log. One of: DEBUG, INFO, WARNING, ERROR")
 	flag.Parse()
@@ -23,6 +24,7 @@ func CliRunArgs() *CliOptions {
 		domain:    *domain,
 		http:      *http,
 		webSocket: *webSocket,
+		ssdb:      *ssdb,
 		logTo:     *logTo,
 		logLevel:  *logLevel,
 	}

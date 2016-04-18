@@ -50,17 +50,20 @@ func (s *Server) Listen() {
 		rawConn.SetDeadline(time.Now().Add(TimeKeepAlive))
 
 		client := &Client{
-			Conn:   rawConn,
+			Conn:   &rawConn,
 			Server: s,
 		}
 
-		go client.Serve()
 		s.onNewClient(client)
+
+		go client.Serve()
 	}
 }
 
 // Read client data from channel
 func (c *Client) Serve() {
+
+	log.Debug("Now serve for %s", (*(c.Conn)).RemoteAddr().String())
 
 	var err error
 
@@ -74,7 +77,7 @@ func (c *Client) Serve() {
 	message := ""
 
 	for {
-		n, err = c.Conn.Read(buf)
+		n, err = (*(c.Conn)).Read(buf)
 
 		if err == io.EOF {
 			message = ""
@@ -89,7 +92,7 @@ func (c *Client) Serve() {
 		message += string(buf[0:n])
 
 		if n > 0 && n < 512 {
-			c.Conn.SetDeadline(time.Now().Add(TimeKeepAlive))
+			(*(c.Conn)).SetDeadline(time.Now().Add(TimeKeepAlive))
 			go c.Server.onNewRequest(c, []byte(message))
 			message = ""
 		}
@@ -114,19 +117,19 @@ func (s *Server) OnClientClosed(callback func(c *Client, err error)) {
 
 // Send text message to client
 func (c *Client) Send(message string) error {
-	_, err := c.Conn.Write([]byte(message))
+	_, err := (*(c.Conn)).Write([]byte(message))
 	return err
 }
 
 // Send bytes to client
 func (c *Client) SendBytes(b []byte) error {
-	_, err := c.Conn.Write(b)
+	_, err := (*(c.Conn)).Write(b)
 	return err
 }
 
 func (c *Client) Close(err error) error {
 	c.Server.onClientClosed(c, err)
-	return c.Conn.Close()
+	return (*(c.Conn)).Close()
 }
 
 func (c *ClientClient) Dial(domain string) {

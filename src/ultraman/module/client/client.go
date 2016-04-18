@@ -52,7 +52,10 @@ func buildWebSocketClient(wg *(sync.WaitGroup), auth, addr string) {
 					}
 				}
 			}
+		} else {
+			log.Error("Auth failed")
 		}
+	} else {
+		log.Error("Failed to connect server")
 	}
-
 }
