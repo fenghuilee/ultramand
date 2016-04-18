@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"sync"
 	"ultraman/lib/log"
 
@@ -40,12 +41,17 @@ func buildWebSocketClient(wg *(sync.WaitGroup), auth, addr string) {
 				log.Debug("Websocket recv: %v,%s", mt, msg)
 				// DATA
 				if mt == websocket.BinaryMessage {
+					headers := strings.Split(string(msg), "\n")
+					id := headers[0]
+					requestHeaders := headers[1:]
+					message := []byte(strings.Join(requestHeaders, "\n"))
 
-					resp := httpClient.OpenUrl(&msg)
+					resp := httpClient.OpenUrl(&message)
+					newResp := string(id) + "\n" + string(resp)
 
-					log.Debug("%s", resp)
+					log.Debug("%s", newResp)
 
-					err = wsClient.Conn.WriteMessage(mt, resp)
+					err = wsClient.Conn.WriteMessage(mt, []byte(newResp))
 					if err != nil {
 						log.Warn("Failed to write websocket: %v", err)
 						break

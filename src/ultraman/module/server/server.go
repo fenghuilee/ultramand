@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -82,8 +83,17 @@ func proxyHttpRequest(c *(httpserv.Client), message *([]byte)) {
 		(*(c.Conn)).Write([]byte(fmt.Sprintf(NotFound, notFountLen, domain)))
 		return
 	}
+
+	id := []string{(*(c.Conn)).RemoteAddr().String()}
+	newHeaders := make([]string, 1+len(headers))
+	copy(newHeaders, id)
+	copy(newHeaders[1:], headers)
+
 	wsc := userList[user]
-	wsc.Conn.WriteMessage(websocket.BinaryMessage, *message)
+
+	log.Debug("new header %v", strings.Join(newHeaders, "\n"))
+
+	wsc.Conn.WriteMessage(websocket.BinaryMessage, []byte(strings.Join(newHeaders, "\n")))
 }
 
 func buildWebSocketServer(wg *(sync.WaitGroup), addr string) {
@@ -188,8 +198,13 @@ func handleClientAuth(wg *(sync.WaitGroup), c *(websocketserv.Client)) {
 }
 
 func handleHttpRespone(message *([]byte)) {
-	log.Debug("HandleHttpRespone: %s", *message)
-	for _, hc := range httpServer.Clients {
-		(*(hc.Conn)).Write(*message)
-	}
+
+	idx := bytes.Index(*message, []byte("\n"))
+	id := string((*message)[0:idx])
+	respMsg := (*message)[idx:]
+
+	log.Debug("HandleHttpRespone: %s", respMsg)
+
+	c := *((*(httpServer.Clients[id])).Conn)
+	c.Write(respMsg)
 }
