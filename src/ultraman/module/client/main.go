@@ -12,5 +12,5 @@ func Run() {
 	log.LogTo(cliOpts.logTo, cliOpts.logLevel)
 
 	// start http/websocket server listeners
-	StartClient(cliOpts.authKey, cliOpts.webSocket)
+	startClient(cliOpts.authKey, cliOpts.webSocket)
 }

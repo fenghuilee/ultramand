@@ -1,11 +1,8 @@
 package websocket
 
 import (
-	//"io"
 	"net/http"
 	"net/url"
-	"os"
-	//"time"
 	"ultraman/lib/log"
 
 	"github.com/gorilla/websocket"
@@ -38,8 +35,7 @@ func (s *Server) Listen() {
 
 	err := http.ListenAndServe(s.Addr, nil)
 	if err != nil {
-		log.Error("Failed to listen public websocket address: %v", err)
-		os.Exit(1)
+		panic(log.Error("Failed to listen public websocket address: %v", err))
 	}
 }
 
@@ -80,7 +76,6 @@ func (c *Client) Serve() {
 			log.Warn("Failed to read websocket: %v", err)
 			return
 		}
-		log.Debug("Websocket recv: %v,%s", mt, msg)
 		// DATA
 		if mt == websocket.BinaryMessage {
 
@@ -101,8 +96,7 @@ func (c *ClientClient) Dial() bool {
 
 	ws, _, err := websocket.DefaultDialer.Dial(url.String(), nil)
 	if err != nil {
-		log.Error("Failed to connect server: %v", err)
-		os.Exit(1)
+		panic(log.Error("Failed to connect server: %v", err))
 	}
 
 	c.Conn = ws
@@ -120,7 +114,6 @@ func (c *ClientClient) Auth() bool {
 			log.Warn("Failed to read websocket: %v", err)
 			return false
 		}
-		log.Debug("Websocket recv: %s", msg)
 		// CTL
 		if string(msg) == "ok" {
 			log.Info("Auth success")

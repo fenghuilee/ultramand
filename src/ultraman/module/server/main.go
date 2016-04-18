@@ -12,5 +12,5 @@ func Run() {
 	log.LogTo(cliOpts.logTo, cliOpts.logLevel)
 
 	// start http/websocket server listeners
-	StartServer(cliOpts.http, cliOpts.webSocket, cliOpts.ssdb)
+	startServer(cliOpts.http, cliOpts.webSocket, cliOpts.ssdb)
 }

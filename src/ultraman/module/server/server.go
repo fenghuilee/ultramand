@@ -24,8 +24,7 @@ var httpServer *httpserv.Server
 var websockServer *websocketserv.Server
 var ssdbClient *gossdb.Client
 
-func StartServer(httpAddr, webSocketAddr, ssdbAddr string) {
-
+func startServer(httpAddr, webSocketAddr, ssdbAddr string) {
 	domainList = make(map[string]string)
 	userList = make(map[string](*(websocketserv.Client)))
 
@@ -51,20 +50,19 @@ func buildHttpServer(wg *(sync.WaitGroup), addr string) {
 	httpServer.OnNewClient(func(c *(httpserv.Client)) {
 		// new client connected
 		// lets send some message
-		log.Debug("New http connection connected: %v", (*(c.Conn)).RemoteAddr().String())
+		log.Debug("New http connection connected: %s", (*(c.Conn)).RemoteAddr().String())
 		httpServer.Clients[(*(c.Conn)).RemoteAddr().String()] = c
 		log.Debug("Total %d http connection(s) connected", len(httpServer.Clients))
 	})
 
 	httpServer.OnNewRequest(func(c *(httpserv.Client), message []byte) {
 		// new http request message received
-		log.Debug("Received host %s new http request:\n<------Request Message------>\n%v\n<------Request Message------>", (*(c.Conn)).RemoteAddr(), string(message))
 		proxyHttpRequest(c, &message)
 	})
 
 	httpServer.OnClientClosed(func(c *(httpserv.Client), err error) {
 		// connection with client lost
-		log.Debug("Http connection disconnected: %v", (*(c.Conn)).RemoteAddr().String())
+		log.Debug("Http connection disconnected: %s", (*(c.Conn)).RemoteAddr().String())
 		delete(httpServer.Clients, (*(c.Conn)).RemoteAddr().String())
 		log.Debug("Total %d http connection(s) connected", len(httpServer.Clients))
 	})
@@ -78,6 +76,7 @@ func proxyHttpRequest(c *(httpserv.Client), message *([]byte)) {
 	host := strings.Split(headers[1], ":")
 	domain := strings.TrimSpace(host[1])
 	user := domainList[domain]
+
 	if user == "" {
 		notFountLen := len(fmt.Sprintf("Tunnel %s not found", domain)) + 1
 		(*(c.Conn)).Write([]byte(fmt.Sprintf(NotFound, notFountLen, domain)))
@@ -90,8 +89,6 @@ func proxyHttpRequest(c *(httpserv.Client), message *([]byte)) {
 	copy(newHeaders[1:], headers)
 
 	wsc := userList[user]
-
-	log.Debug("new header %v", strings.Join(newHeaders, "\n"))
 
 	wsc.Conn.WriteMessage(websocket.BinaryMessage, []byte(strings.Join(newHeaders, "\n")))
 }
@@ -160,7 +157,7 @@ func handleClientAuth(wg *(sync.WaitGroup), c *(websocketserv.Client)) {
 		key := authMessage[1]
 
 		rst, err := ssdbClient.Get(user)
-		log.Debug("SSDB K-V: %s, %v", rst.String(), err)
+
 		if err != nil {
 			log.Warn("SSDB Error: %v", err)
 			c.Conn.WriteMessage(websocket.TextMessage, []byte("System error, please try again latter"))
@@ -189,21 +186,15 @@ func handleClientAuth(wg *(sync.WaitGroup), c *(websocketserv.Client)) {
 			}
 		}
 
-		log.Debug("DomainList: %v", domainList)
-		log.Debug("UserList: %v", userList)
-
 		c.Conn.WriteMessage(websocket.TextMessage, []byte("ok"))
 		break
 	}
 }
 
 func handleHttpRespone(message *([]byte)) {
-
 	idx := bytes.Index(*message, []byte("\n"))
 	id := string((*message)[0:idx])
 	respMsg := (*message)[idx:]
-
-	log.Debug("HandleHttpRespone: %s", respMsg)
 
 	c := *((*(httpServer.Clients[id])).Conn)
 	c.Write(respMsg)
