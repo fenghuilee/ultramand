@@ -2,7 +2,7 @@ package server
 
 const (
 	NotAuthorized = `HTTP/1.0 401 Not Authorized
-WWW-Authenticate: Basic realm="ultraman"
+WWW-Authenticate: Basic realm="ultramand"
 Content-Length: 23
 
 Authorization required

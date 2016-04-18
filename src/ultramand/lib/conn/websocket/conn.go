@@ -3,7 +3,7 @@ package websocket
 import (
 	"net/http"
 	"net/url"
-	"ultraman/lib/log"
+	"ultramand/lib/log"
 
 	"github.com/gorilla/websocket"
 )

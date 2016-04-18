@@ -1,7 +1,7 @@
 package ssdb
 
 import (
-	"ultraman/lib/log"
+	"ultramand/lib/log"
 
 	"github.com/seefan/gossdb"
 )

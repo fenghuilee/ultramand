@@ -3,10 +3,10 @@ package client
 import (
 	"strings"
 	"sync"
-	"ultraman/lib/log"
+	"ultramand/lib/log"
 
-	httpclient "ultraman/lib/conn/http"
-	websocketclient "ultraman/lib/conn/websocket"
+	httpclient "ultramand/lib/conn/http"
+	websocketclient "ultramand/lib/conn/websocket"
 
 	"github.com/gorilla/websocket"
 )

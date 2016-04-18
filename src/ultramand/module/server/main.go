@@ -1,7 +1,7 @@
-package client
+package server
 
 import (
-	"ultraman/lib/log"
+	"ultramand/lib/log"
 )
 
 func Run() {
@@ -12,5 +12,5 @@ func Run() {
 	log.LogTo(cliOpts.logTo, cliOpts.logLevel)
 
 	// start http/websocket server listeners
-	startClient(cliOpts.authKey, cliOpts.webSocket)
+	startServer(cliOpts.http, cliOpts.webSocket, cliOpts.ssdb)
 }

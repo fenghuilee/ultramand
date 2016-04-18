@@ -1,7 +1,7 @@
 package proto
 
 import (
-	"ultraman/conn"
+	"ultramand/conn"
 )
 
 type Protocol interface {

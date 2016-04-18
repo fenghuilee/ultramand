@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 	"time"
-	"ultraman/lib/log"
+	"ultramand/lib/log"
 )
 
 // Creates new server instance

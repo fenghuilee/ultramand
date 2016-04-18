@@ -2,7 +2,7 @@ package main
 
 import (
 	"runtime"
-	"ultraman/module/server"
+	"ultramand/module/server"
 )
 
 func main() {

@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"ultraman/lib/log"
-	"ultraman/lib/ssdb"
+	"ultramand/lib/log"
+	"ultramand/lib/ssdb"
 
-	httpserv "ultraman/lib/conn/http"
-	websocketserv "ultraman/lib/conn/websocket"
+	httpserv "ultramand/lib/conn/http"
+	websocketserv "ultramand/lib/conn/websocket"
 
 	"github.com/gorilla/websocket"
 	"github.com/seefan/gossdb"

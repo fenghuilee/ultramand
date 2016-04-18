@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"ultraman/lib/conn"
+	"ultramand/lib/conn"
 )
 
 func readMsgShared(c conn.Conn) (buffer []byte, err error) {
