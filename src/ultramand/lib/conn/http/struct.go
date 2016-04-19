@@ -8,6 +8,7 @@ import (
 const (
 	// Time allowed to read/write the tcp connection to the client.
 	TimeKeepAlive = 60 * time.Second
+	ReadTimeOut   = 30 * time.Second
 )
 
 type Server struct {
@@ -15,7 +16,7 @@ type Server struct {
 	Clients        map[string](*Client)
 	onNewClient    func(c *Client)
 	onNewRequest   func(c *Client, message []byte)
-	onClientClosed func(c *Client, err error)
+	onClientClosed func(c *Client)
 }
 
 type Client struct {

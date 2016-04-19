@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"io"
 	"net/http"
 	"net/url"
 	"ultramand/lib/log"
@@ -61,9 +62,6 @@ func (s *Server) handleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 // Read client data from channel
 func (c *Client) Serve() {
-
-	log.Debug("Now serve for %s", c.Conn.RemoteAddr().String())
-
 	defer func() {
 		c.Conn.Close()
 		c.Server.onClientClosed(c, nil)
@@ -73,7 +71,9 @@ func (c *Client) Serve() {
 	for {
 		mt, msg, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Warn("Failed to read websocket: %v", err)
+			if err != io.EOF {
+				log.Warn("Failed to read websocket: %v", err)
+			}
 			return
 		}
 		// DATA
@@ -106,6 +106,8 @@ func (c *ClientClient) Dial() bool {
 
 func (c *ClientClient) Auth() bool {
 
+	log.Debug("Sending auth request message: %s", c.AuthKey)
+
 	c.Conn.WriteMessage(websocket.TextMessage, []byte(c.AuthKey))
 
 	for {
@@ -114,7 +116,33 @@ func (c *ClientClient) Auth() bool {
 			log.Warn("Failed to read websocket: %v", err)
 			return false
 		}
-		// CTL
+
+		log.Debug("Received auth respone message: %s", msg)
+
+		if string(msg) == "ok" {
+			log.Info("Auth success")
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *ClientClient) DomainLocalHostPort() bool {
+
+	log.Debug("Sending auth request message: %s", c.AuthKey)
+
+	c.Conn.WriteMessage(websocket.TextMessage, []byte(c.AuthKey))
+
+	for {
+		_, msg, err := c.Conn.ReadMessage()
+		if err != nil {
+			log.Warn("Failed to read websocket: %v", err)
+			return false
+		}
+
+		log.Debug("Received auth respone message: %s", msg)
+
 		if string(msg) == "ok" {
 			log.Info("Auth success")
 			return true

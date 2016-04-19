@@ -3,7 +3,6 @@ package http
 import (
 	"io"
 	"net"
-	"strings"
 	"time"
 	"ultramand/lib/log"
 )
@@ -18,32 +17,35 @@ func New(addr string) *Server {
 
 	server.OnNewClient(func(c *Client) {})
 	server.OnNewRequest(func(c *Client, message []byte) {})
-	server.OnClientClosed(func(c *Client, err error) {})
+	server.OnClientClosed(func(c *Client) {})
 
 	return server
 }
 
 // Listens for new http connections from the public internet
 func (s *Server) Listen() {
-	log.Info("Listening for public http connections on %v", s.Addr)
-	listener, err := net.Listen("tcp", s.Addr)
-	defer listener.Close()
+	l, err := net.Listen("tcp", s.Addr)
+
+	defer func() {
+		l.Close()
+	}()
 
 	if err != nil {
 		panic(log.Error("Failed to listen public http address: %v", err))
 	}
+	log.Info("Listening for public http connections on %v", s.Addr)
 
 	for {
-		rawConn, err := listener.Accept()
+		conn, err := l.Accept()
 		if err != nil {
-			log.Warn("Failed to accept new http connection: %v", err)
+			log.Debug("Failed to accept new http connection: %v", err)
 			continue
 		}
 
-		rawConn.SetReadDeadline(time.Now().Add(TimeKeepAlive))
+		conn.SetReadDeadline(time.Now().Add(ReadTimeOut))
 
 		client := &Client{
-			Conn:   &rawConn,
+			Conn:   &conn,
 			Server: s,
 		}
 
@@ -55,39 +57,30 @@ func (s *Server) Listen() {
 
 // Read client data from channel
 func (c *Client) Serve() {
-	log.Debug("Now serve for %s", (*(c.Conn)).RemoteAddr().String())
-
-	var err error
 
 	defer func() {
-		c.Close(err)
+		c.Close()
 	}()
 
+	var err error
 	n := 0
-	buf := make([]byte, 512)
-
+	buf := make([]byte, 4)
 	message := ""
-
 	for {
 		n, err = (*(c.Conn)).Read(buf)
-
-		if err == io.EOF {
+		if err != nil {
+			break
+		}
+		if n != 0 {
+			message += string(buf[0:n])
+		}
+		if n > 0 && n < 4 {
+			(*(c.Conn)).SetReadDeadline(time.Now().Add(ReadTimeOut))
+			go c.Server.onNewRequest(c, []byte(message))
 			message = ""
 			continue
 		}
 
-		if err != nil {
-			log.Debug("Failed to read http request message: %v", err)
-			break
-		}
-
-		message += string(buf[0:n])
-
-		if n > 0 && n < 512 {
-			(*(c.Conn)).SetReadDeadline(time.Now().Add(TimeKeepAlive))
-			go c.Server.onNewRequest(c, []byte(message))
-			message = ""
-		}
 	}
 
 }
@@ -103,7 +96,7 @@ func (s *Server) OnNewRequest(callback func(c *Client, message []byte)) {
 }
 
 // Called right after connection closed
-func (s *Server) OnClientClosed(callback func(c *Client, err error)) {
+func (s *Server) OnClientClosed(callback func(c *Client)) {
 	s.onClientClosed = callback
 }
 
@@ -119,17 +112,15 @@ func (c *Client) SendBytes(b []byte) error {
 	return err
 }
 
-func (c *Client) Close(err error) error {
-	c.Server.onClientClosed(c, err)
+func (c *Client) Close() error {
+	c.Server.onClientClosed(c)
 	return (*(c.Conn)).Close()
 }
 
-func (c *ClientClient) OpenUrl(message *([]byte)) []byte {
-
-	conn, err := net.Dial("tcp", ":80")
-
+func (c *ClientClient) OpenUrl(message *([]byte), addr *string) []byte {
+	conn, err := net.Dial("tcp", *addr)
 	defer func() {
-		conn.SetReadDeadline(time.Now().Add(TimeKeepAlive))
+		conn.SetReadDeadline(time.Now().Add(ReadTimeOut))
 	}()
 
 	if err != nil {
@@ -137,11 +128,10 @@ func (c *ClientClient) OpenUrl(message *([]byte)) []byte {
 		return []byte{}
 	}
 
-	*message = []byte(strings.Replace(string(*message), "8000", "80", 1))
 	conn.Write(*message)
 
 	n := 0
-	buf := make([]byte, 512)
+	buf := make([]byte, 1024)
 
 	respMessage := ""
 
@@ -151,11 +141,11 @@ func (c *ClientClient) OpenUrl(message *([]byte)) []byte {
 			break
 		}
 		if err != nil {
-			log.Debug("Failed to read http request message: %v", err)
+			log.Warn("Failed to read http request message: %v", err)
 			break
 		}
 		respMessage += string(buf[0:n])
-		if n > 0 && n < 512 {
+		if n > 0 && n < 1024 {
 			break
 		}
 	}

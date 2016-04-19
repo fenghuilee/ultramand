@@ -50,7 +50,7 @@ func buildHttpServer(wg *(sync.WaitGroup), addr string) {
 	httpServer.OnNewClient(func(c *(httpserv.Client)) {
 		// new client connected
 		// lets send some message
-		log.Debug("New http connection connected: %s", (*(c.Conn)).RemoteAddr().String())
+		log.Debug("New http connection: %s", (*(c.Conn)).RemoteAddr().String())
 		httpServer.Clients[(*(c.Conn)).RemoteAddr().String()] = c
 		log.Debug("Total %d http connection(s) connected", len(httpServer.Clients))
 	})
@@ -60,9 +60,9 @@ func buildHttpServer(wg *(sync.WaitGroup), addr string) {
 		proxyHttpRequest(c, &message)
 	})
 
-	httpServer.OnClientClosed(func(c *(httpserv.Client), err error) {
+	httpServer.OnClientClosed(func(c *(httpserv.Client)) {
 		// connection with client lost
-		log.Debug("Http connection disconnected: %s", (*(c.Conn)).RemoteAddr().String())
+		log.Debug("Http connection closed: %s", (*(c.Conn)).RemoteAddr().String())
 		delete(httpServer.Clients, (*(c.Conn)).RemoteAddr().String())
 		log.Debug("Total %d http connection(s) connected", len(httpServer.Clients))
 	})
@@ -73,13 +73,12 @@ func buildHttpServer(wg *(sync.WaitGroup), addr string) {
 // Handles a new http connection from the public internet
 func proxyHttpRequest(c *(httpserv.Client), message *([]byte)) {
 	headers := strings.Split(string(*message), "\n")
-	host := strings.Split(headers[1], ":")
-	domain := strings.TrimSpace(host[1])
-	user := domainList[domain]
+	domain := strings.TrimSpace((strings.Split(headers[1], ":"))[1])
+	user, ok := domainList[domain]
 
-	if user == "" {
-		notFountLen := len(fmt.Sprintf("Tunnel %s not found", domain)) + 1
-		(*(c.Conn)).Write([]byte(fmt.Sprintf(NotFound, notFountLen, domain)))
+	if ok == false {
+		(*(c.Conn)).Write([]byte(fmt.Sprintf(NotFound, len(domain)+18, domain)))
+		c.Close()
 		return
 	}
 
@@ -101,7 +100,7 @@ func buildWebSocketServer(wg *(sync.WaitGroup), addr string) {
 	websockServer.OnNewClient(func(c *(websocketserv.Client)) {
 		// new client connected
 		// lets send some message
-		log.Debug("New websocket connection connected: %v", c.Conn.RemoteAddr().String())
+		log.Debug("New websocket connection: %s", c.Conn.RemoteAddr().String())
 		websockServer.Clients[c.Conn.RemoteAddr().String()] = c
 		log.Debug("Total %d websocket connection(s) connected", len(websockServer.Clients))
 
@@ -114,7 +113,6 @@ func buildWebSocketServer(wg *(sync.WaitGroup), addr string) {
 
 	websockServer.OnNewRequest(func(c *(websocketserv.Client)) {
 		// new http request message received
-		//HandleHttpRequest(c)
 	})
 
 	websockServer.OnNewRespone(func(c *(websocketserv.Client), message []byte) {
@@ -124,7 +122,7 @@ func buildWebSocketServer(wg *(sync.WaitGroup), addr string) {
 
 	websockServer.OnClientClosed(func(c *(websocketserv.Client), err error) {
 		// connection with client lost
-		log.Debug("Websocket connection disconnected: %v", c.Conn.RemoteAddr().String())
+		log.Debug("Websocket connection closed: %s", c.Conn.RemoteAddr().String())
 		delete(websockServer.Clients, c.Conn.RemoteAddr().String())
 		log.Debug("Total %d http connection(s) connected", len(websockServer.Clients))
 	})
@@ -134,15 +132,15 @@ func buildWebSocketServer(wg *(sync.WaitGroup), addr string) {
 
 func handleClientAuth(wg *(sync.WaitGroup), c *(websocketserv.Client)) {
 	defer (*wg).Done()
-	log.Debug("Wait client %v login", c.Conn.RemoteAddr().String())
+	log.Debug("Wait client %s login", c.Conn.RemoteAddr().String())
 	c.Conn.WriteMessage(websocket.TextMessage, []byte("Please login"))
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			log.Debug("Failed to %s to login: %s", c.Conn.RemoteAddr().String(), err)
+			log.Debug("Failed to login: %s, %v", c.Conn.RemoteAddr().String(), err)
 			return
 		}
-		log.Debug("Auth message: %s, %s", c.Conn.RemoteAddr().String(), message)
+		log.Debug("Received auth message: %s, %s", c.Conn.RemoteAddr().String(), message)
 
 		authMessage := strings.Split(string(message), ":")
 
@@ -175,18 +173,22 @@ func handleClientAuth(wg *(sync.WaitGroup), c *(websocketserv.Client)) {
 		userList[user] = c
 
 		rsts, err := ssdbClient.Hscan(user, "", "", 5)
+		domainLocalHostPort := []string{}
 		if err != nil {
 			log.Warn("SSDB Error: %v", err)
 			c.Conn.WriteMessage(websocket.TextMessage, []byte("System error, please try again latter"))
 			c.Conn.Close()
 			return
 		} else {
-			for domain, _ := range rsts {
+			for domain, lhp := range rsts {
+				domainLocalHostPort = append(domainLocalHostPort, domain+"|"+lhp.String())
 				domainList[domain] = user
 			}
 		}
 
 		c.Conn.WriteMessage(websocket.TextMessage, []byte("ok"))
+
+		c.Conn.WriteMessage(websocket.TextMessage, []byte(strings.Join(domainLocalHostPort, "\n")))
 		break
 	}
 }
